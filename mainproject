@@ -1,0 +1,167 @@
+import javafx.animation.AnimationTimer;
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Random;
+
+public class FlappyBirdFX extends Application {
+
+    private static final int WIDTH = 400;
+    private static final int HEIGHT = 600;
+    private static final int PIPE_WIDTH = 60;
+    private static final int GAP = 150;
+    private static final int PIPE_SPEED = 3;
+
+    private Circle bird;
+    private double velocity = 0;
+    private final double gravity = 0.5;
+    private final double jumpStrength = -8;
+
+    private Pane root;
+    private ArrayList<Rectangle> pipes = new ArrayList<>();
+    private ArrayList<Boolean> scoredPipes = new ArrayList<>();
+    private AnimationTimer timer;
+    private int frameCount = 0;
+
+    private boolean gameOver = false;
+    private int score = 0;
+    private Text scoreText;
+
+    @Override
+    public void start(Stage primaryStage) {
+        root = new Pane();
+        Scene scene = new Scene(root, WIDTH, HEIGHT);
+
+        bird = new Circle(20, Color.YELLOW);
+        bird.setCenterX(100);
+        bird.setCenterY(HEIGHT / 2);
+        root.getChildren().add(bird);
+
+        scoreText = new Text("Score: 0");
+        scoreText.setFont(Font.font(24));
+        scoreText.setFill(Color.BLACK);
+        scoreText.setX(10);
+        scoreText.setY(30);
+        root.getChildren().add(scoreText);
+
+        scene.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.SPACE && !gameOver) {
+                velocity = jumpStrength;
+            } else if (gameOver && e.getCode() == KeyCode.R) {
+                restartGame();
+            }
+        });
+
+        timer = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                update();
+            }
+        };
+        timer.start();
+
+        primaryStage.setTitle("Flappy Bird JavaFX");
+        primaryStage.setScene(scene);
+        primaryStage.show();
+    }
+
+    private void update() {
+        if (gameOver) return;
+
+        velocity += gravity;
+        bird.setCenterY(bird.getCenterY() + velocity);
+
+        if (frameCount % 100 == 0) {
+            addPipe();
+        }
+
+        movePipes();
+        checkCollision();
+        checkScore();
+
+        if (bird.getCenterY() > HEIGHT || bird.getCenterY() < 0) {
+            endGame();
+        }
+
+        frameCount++;
+    }
+
+    private void addPipe() {
+        Random rand = new Random();
+        int gapStart = rand.nextInt(HEIGHT - GAP - 200) + 100;
+
+        Rectangle top = new Rectangle(PIPE_WIDTH, gapStart);
+        top.setX(WIDTH);
+        top.setY(0);
+        top.setFill(Color.GREEN);
+
+        Rectangle bottom = new Rectangle(PIPE_WIDTH, HEIGHT - gapStart - GAP);
+        bottom.setX(WIDTH);
+        bottom.setY(gapStart + GAP);
+        bottom.setFill(Color.GREEN);
+
+        pipes.add(top);
+        pipes.add(bottom);
+        scoredPipes.add(false);  // Only track one score per pair
+        root.getChildren().addAll(top, bottom);
+    }
+
+    private void movePipes() {
+        Iterator<Rectangle> iter = pipes.iterator();
+        while (iter.hasNext()) {
+            Rectangle pipe = iter.next();
+            pipe.setX(pipe.getX() - PIPE_SPEED);
+        }
+    }
+
+    private void checkCollision() {
+        for (Rectangle pipe : pipes) {
+            if (pipe.getBoundsInParent().intersects(bird.getBoundsInParent())) {
+                endGame();
+            }
+        }
+    }
+
+    private void checkScore() {
+        for (int i = 0; i < pipes.size(); i += 2) {
+            Rectangle topPipe = pipes.get(i);
+            boolean scored = scoredPipes.get(i / 2);
+            if (!scored && topPipe.getX() + PIPE_WIDTH < bird.getCenterX()) {
+                score++;
+                scoreText.setText("Score: " + score);
+                scoredPipes.set(i / 2, true);
+            }
+        }
+    }
+
+    private void endGame() {
+        gameOver = true;
+        System.out.println("Game Over! Final Score: " + score + " | Press R to Restart.");
+    }
+
+    private void restartGame() {
+        root.getChildren().removeIf(node -> node instanceof Rectangle);
+        pipes.clear();
+        scoredPipes.clear();
+        bird.setCenterY(HEIGHT / 2);
+        velocity = 0;
+        frameCount = 0;
+        score = 0;
+        scoreText.setText("Score: 0");
+        gameOver = false;
+    }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+}
