@@ -34,8 +34,11 @@ public class FlappyBirdFX extends Application {
     private int frameCount = 0;
 
     private boolean gameOver = false;
+    private boolean gameStarted = false;
     private int score = 0;
+
     private Text scoreText;
+    private Text messageText;
 
     @Override
     public void start(Stage primaryStage) {
@@ -54,8 +57,18 @@ public class FlappyBirdFX extends Application {
         scoreText.setY(30);
         root.getChildren().add(scoreText);
 
+        messageText = new Text("Press SPACE to Start");
+        messageText.setFont(Font.font(24));
+        messageText.setFill(Color.BLUE);
+        messageText.setX(WIDTH / 2 - 100);
+        messageText.setY(HEIGHT / 2);
+        root.getChildren().add(messageText);
+
         scene.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.SPACE && !gameOver) {
+            if (!gameStarted && e.getCode() == KeyCode.SPACE) {
+                gameStarted = true;
+                messageText.setText("");
+            } else if (gameStarted && !gameOver && e.getCode() == KeyCode.SPACE) {
                 velocity = jumpStrength;
             } else if (gameOver && e.getCode() == KeyCode.R) {
                 restartGame();
@@ -76,7 +89,7 @@ public class FlappyBirdFX extends Application {
     }
 
     private void update() {
-        if (gameOver) return;
+        if (!gameStarted || gameOver) return;
 
         velocity += gravity;
         bird.setCenterY(bird.getCenterY() + velocity);
@@ -112,7 +125,7 @@ public class FlappyBirdFX extends Application {
 
         pipes.add(top);
         pipes.add(bottom);
-        scoredPipes.add(false);  // Only track one score per pair
+        scoredPipes.add(false);  // Track one score per pair
         root.getChildren().addAll(top, bottom);
     }
 
@@ -146,7 +159,7 @@ public class FlappyBirdFX extends Application {
 
     private void endGame() {
         gameOver = true;
-        System.out.println("Game Over! Final Score: " + score + " | Press R to Restart.");
+        messageText.setText("Game Over! Score: " + score + "\nPress R to Restart");
     }
 
     private void restartGame() {
@@ -159,6 +172,8 @@ public class FlappyBirdFX extends Application {
         score = 0;
         scoreText.setText("Score: 0");
         gameOver = false;
+        gameStarted = false;
+        messageText.setText("Press SPACE to Start");
     }
 
     public static void main(String[] args) {
